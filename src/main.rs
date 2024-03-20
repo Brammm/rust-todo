@@ -18,9 +18,16 @@ async fn index(data: web::Data<AppState>) -> impl Responder {
 
     let markup = html! {
         h1 { "Hi, world"}
+        p { "These are your todos: " }
         ul {
             @for todo in todos.iter() {
                 li { (todo) }
+            }
+            li {
+                form action="/todo" method="post" {
+                    input name="name" {}
+                    button type="submit" { "Add" }
+                }
             }
         }
     };
@@ -34,7 +41,7 @@ async fn create(form: web::Form<Create>, data: web::Data<AppState>) -> impl Resp
 
     todos.push(form.name);
 
-    web::Redirect::to("/")
+    HttpResponse::Found().append_header(("Location", "/")).finish()
 }
 
 #[actix_web::main]
