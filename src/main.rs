@@ -1,6 +1,7 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use std::sync::Mutex;
 use serde::Deserialize;
+use maud::html;
 
 struct AppState {
     todos: Mutex<Vec<String>>,
@@ -15,7 +16,15 @@ struct Create {
 async fn index(data: web::Data<AppState>) -> impl Responder {
     let todos = data.todos.lock().unwrap();
 
-    HttpResponse::Ok().body(todos.join("-"))
+    let markup = html! {
+        h1 { "Hi, world"}
+        ul {
+            @for todo in todos.iter() {
+                li { (todo) }
+            }
+        }
+    };
+    HttpResponse::Ok().body(markup.into_string())
 }
 
 #[post("/todo")]
