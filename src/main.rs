@@ -3,13 +3,18 @@ use std::sync::Mutex;
 use serde::Deserialize;
 use maud::html;
 
+struct Todo {
+    description: String,
+    finished: bool,
+}
+
 struct AppState {
-    todos: Mutex<Vec<String>>,
+    todos: Mutex<Vec<Todo>>,
 }
 
 #[derive(Deserialize)]
 struct Create {
-    name: String,
+    description: String,
 }
 
 #[get("/")]
@@ -21,11 +26,14 @@ async fn index(data: web::Data<AppState>) -> impl Responder {
         p { "These are your todos: " }
         ul {
             @for todo in todos.iter() {
-                li { (todo) }
+                li { 
+                    input type="checkbox" checked[todo.finished];
+                    span {(todo.description) }
+                }
             }
             li {
                 form action="/todo" method="post" {
-                    input name="name" {}
+                    input name="description";
                     button type="submit" { "Add" }
                 }
             }
@@ -39,7 +47,7 @@ async fn create(form: web::Form<Create>, data: web::Data<AppState>) -> impl Resp
     let form = form.into_inner();
     let mut todos = data.todos.lock().unwrap();
 
-    todos.push(form.name);
+    todos.push(Todo { description: form.description, finished: false });
 
     HttpResponse::Found().append_header(("Location", "/")).finish()
 }
@@ -47,7 +55,7 @@ async fn create(form: web::Form<Create>, data: web::Data<AppState>) -> impl Resp
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let state = web::Data::new(AppState {
-        todos: Mutex::new(vec![String::from("Learn Rust"), String::from("Create small Todo app")]),
+        todos: Mutex::new(vec![Todo { description: String::from("Learn Rust"), finished: true }, Todo { description: String::from("Create small Todo app"), finished: false}]),
     });
 
     HttpServer::new(move || {
