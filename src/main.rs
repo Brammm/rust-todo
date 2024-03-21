@@ -54,10 +54,9 @@ struct Create {
 
 #[post("/todo")]
 async fn create(form: web::Form<Create>, data: web::Data<AppState>) -> impl Responder {
-    let form = form.into_inner();
     let mut todos = data.todos.lock().unwrap();
 
-    todos.push(Todo { description: form.description, finished: false });
+    todos.push(Todo { description: form.description.clone(), finished: false });
 
     HttpResponse::Found().append_header(("Location", "/")).finish()
 }
@@ -70,10 +69,9 @@ struct Toggle {
 
 #[post("/toggle")]
 async fn toggle(form: web::Form<Toggle>, data: web::Data<AppState>) -> impl Responder {
-    let form = form.into_inner();
     let mut todos = data.todos.lock().unwrap();
 
-    todos[form.index].finished = matches!(form.finished, Some(_i));
+    todos[form.index].finished = matches!(form.finished.clone(), Some(_i));
 
     HttpResponse::Found().append_header(("Location", "/")).finish()
 }
