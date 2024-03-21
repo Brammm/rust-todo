@@ -1,7 +1,7 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
-use std::sync::Mutex;
-use serde::Deserialize;
 use maud::html;
+use serde::Deserialize;
+use std::sync::Mutex;
 
 struct Todo {
     description: String,
@@ -21,17 +21,22 @@ async fn index(data: web::Data<AppState>) -> impl Responder {
         p { "These are your todos: " }
         ul {
             @for (i, todo) in todos.iter().enumerate() {
-                li { 
+                li {
                     form action="/toggle" method="post" {
                         input type="hidden" name="index" value=(i);
                         label for=(i) {
-                            input id=(i) type="checkbox" checked[todo.finished] name="finished" value="checked" onChange="this.form.submit()";
+                            input id=(i)
+                                type="checkbox"
+                                checked[todo.finished]
+                                name="finished"
+                                value="checked"
+                                onChange="this.form.submit()";
                             @if todo.finished {
                                 s {(todo.description)}
                             } @else {
                                 (todo.description)
                             }
-                            
+
                         }
                     }
                 }
@@ -56,9 +61,14 @@ struct Create {
 async fn create(form: web::Form<Create>, data: web::Data<AppState>) -> impl Responder {
     let mut todos = data.todos.lock().unwrap();
 
-    todos.push(Todo { description: form.description.clone(), finished: false });
+    todos.push(Todo {
+        description: form.description.clone(),
+        finished: false,
+    });
 
-    HttpResponse::Found().append_header(("Location", "/")).finish()
+    HttpResponse::Found()
+        .append_header(("Location", "/"))
+        .finish()
 }
 
 #[derive(Deserialize)]
@@ -73,13 +83,24 @@ async fn toggle(form: web::Form<Toggle>, data: web::Data<AppState>) -> impl Resp
 
     todos[form.index].finished = matches!(form.finished.clone(), Some(_i));
 
-    HttpResponse::Found().append_header(("Location", "/")).finish()
+    HttpResponse::Found()
+        .append_header(("Location", "/"))
+        .finish()
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let state = web::Data::new(AppState {
-        todos: Mutex::new(vec![Todo { description: String::from("Learn Rust"), finished: true }, Todo { description: String::from("Create small Todo app"), finished: false}]),
+        todos: Mutex::new(vec![
+            Todo {
+                description: String::from("Learn Rust"),
+                finished: true,
+            },
+            Todo {
+                description: String::from("Create small Todo app"),
+                finished: false,
+            },
+        ]),
     });
 
     HttpServer::new(move || {
