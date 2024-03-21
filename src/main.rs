@@ -12,23 +12,28 @@ struct AppState {
     todos: Mutex<Vec<Todo>>,
 }
 
-#[derive(Deserialize)]
-struct Create {
-    description: String,
-}
-
 #[get("/")]
 async fn index(data: web::Data<AppState>) -> impl Responder {
     let todos = data.todos.lock().unwrap();
 
     let markup = html! {
-        h1 { "Hi, world"}
+        h1 { "Hello world"}
         p { "These are your todos: " }
         ul {
-            @for todo in todos.iter() {
+            @for (i, todo) in todos.iter().enumerate() {
                 li { 
-                    input type="checkbox" checked[todo.finished];
-                    span {(todo.description) }
+                    form action="/toggle" method="post" {
+                        input type="hidden" name="index" value=(i);
+                        label for=(i) {
+                            input id=(i) type="checkbox" checked[todo.finished] name="finished" value="checked" onChange="this.form.submit()";
+                            @if todo.finished {
+                                s {(todo.description)}
+                            } @else {
+                                (todo.description)
+                            }
+                            
+                        }
+                    }
                 }
             }
             li {
@@ -42,12 +47,33 @@ async fn index(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().body(markup.into_string())
 }
 
+#[derive(Deserialize)]
+struct Create {
+    description: String,
+}
+
 #[post("/todo")]
 async fn create(form: web::Form<Create>, data: web::Data<AppState>) -> impl Responder {
     let form = form.into_inner();
     let mut todos = data.todos.lock().unwrap();
 
     todos.push(Todo { description: form.description, finished: false });
+
+    HttpResponse::Found().append_header(("Location", "/")).finish()
+}
+
+#[derive(Deserialize)]
+struct Toggle {
+    index: usize,
+    finished: Option<String>,
+}
+
+#[post("/toggle")]
+async fn toggle(form: web::Form<Toggle>, data: web::Data<AppState>) -> impl Responder {
+    let form = form.into_inner();
+    let mut todos = data.todos.lock().unwrap();
+
+    todos[form.index].finished = matches!(form.finished, Some(_i));
 
     HttpResponse::Found().append_header(("Location", "/")).finish()
 }
@@ -63,6 +89,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(state.clone())
             .service(index)
             .service(create)
+            .service(toggle)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
